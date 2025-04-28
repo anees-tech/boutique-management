@@ -4,11 +4,13 @@ import { useState, useEffect } from "react"
 import { useLocation } from "react-router-dom"
 import ProductCard from "../components/ProductCard"
 import "../styles/Products.css"
+import { dummyProducts, dummyCategories } from "../dummyData" // Import dummy data
 
 function Products() {
-  const [products, setProducts] = useState([])
-  const [categories, setCategories] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [allProducts] = useState(dummyProducts) // Store original dummy products
+  const [filteredProducts, setFilteredProducts] = useState(dummyProducts) // State for filtered products
+  const [categories] = useState(dummyCategories) // Use dummy categories
+  const [loading, setLoading] = useState(false) // Set loading to false initially
   const [error, setError] = useState(null)
   const [filters, setFilters] = useState({
     category: "",
@@ -19,59 +21,61 @@ function Products() {
 
   const location = useLocation()
 
+  // Apply category filter from URL on initial load
   useEffect(() => {
-    // Extract category from URL query params if present
     const queryParams = new URLSearchParams(location.search)
     const categoryParam = queryParams.get("category")
 
     if (categoryParam) {
       setFilters((prev) => ({ ...prev, category: categoryParam }))
     }
-  }, [location.search])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search]) // Run only when search params change
 
+  // Apply filters and sorting whenever filters or allProducts change
   useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const response = await fetch("http://localhost:5000/api/categories")
-        if (!response.ok) {
-          throw new Error("Failed to fetch categories")
-        }
-        const data = await response.json()
-        setCategories(data)
-      } catch (err) {
-        setError(err.message)
-      }
+    setLoading(true) // Simulate loading briefly
+    let tempProducts = [...allProducts]
+
+    // Apply category filter
+    if (filters.category) {
+      tempProducts = tempProducts.filter((p) => p.category === filters.category)
     }
 
-    fetchCategories()
-  }, [])
-
-  useEffect(() => {
-    const fetchProducts = async () => {
-      setLoading(true)
-      try {
-        // Build query string based on filters
-        const queryParams = new URLSearchParams()
-        if (filters.category) queryParams.append("category", filters.category)
-        if (filters.minPrice) queryParams.append("minPrice", filters.minPrice)
-        if (filters.maxPrice) queryParams.append("maxPrice", filters.maxPrice)
-        if (filters.sort) queryParams.append("sort", filters.sort)
-
-        const response = await fetch(`http://localhost:5000/api/products?${queryParams.toString()}`)
-        if (!response.ok) {
-          throw new Error("Failed to fetch products")
-        }
-        const data = await response.json()
-        setProducts(data)
-        setLoading(false)
-      } catch (err) {
-        setError(err.message)
-        setLoading(false)
-      }
+    // Apply price filters
+    if (filters.minPrice) {
+      tempProducts = tempProducts.filter((p) => p.price >= Number(filters.minPrice))
+    }
+    if (filters.maxPrice) {
+      tempProducts = tempProducts.filter((p) => p.price <= Number(filters.maxPrice))
     }
 
-    fetchProducts()
-  }, [filters])
+    // Apply sorting
+    switch (filters.sort) {
+      case "price-low-high":
+        tempProducts.sort((a, b) => a.price - b.price)
+        break
+      case "price-high-low":
+        tempProducts.sort((a, b) => b.price - a.price)
+        break
+      case "name-a-z":
+        tempProducts.sort((a, b) => a.name.localeCompare(b.name))
+        break
+      case "name-z-a":
+        tempProducts.sort((a, b) => b.name.localeCompare(a.name))
+        break
+      default: // newest
+        tempProducts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    }
+
+    // Simulate network delay
+    const timer = setTimeout(() => {
+      setFilteredProducts(tempProducts)
+      setLoading(false)
+    }, 300) // 300ms delay
+
+    return () => clearTimeout(timer) // Cleanup timer on unmount or filter change
+  }, [filters, allProducts])
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target
@@ -85,10 +89,6 @@ function Products() {
       maxPrice: "",
       sort: "newest",
     })
-  }
-
-  if (loading && products.length === 0) {
-    return <div className="loading">Loading products...</div>
   }
 
   if (error) {
@@ -124,6 +124,7 @@ function Products() {
               value={filters.minPrice}
               onChange={handleFilterChange}
               min="0"
+              placeholder="e.g., 10"
             />
           </div>
 
@@ -136,6 +137,7 @@ function Products() {
               value={filters.maxPrice}
               onChange={handleFilterChange}
               min="0"
+              placeholder="e.g., 100"
             />
           </div>
 
@@ -156,8 +158,12 @@ function Products() {
         </aside>
 
         <div className="products-grid">
-          {products.length > 0 ? (
-            products.map((product) => <ProductCard key={product._id} product={product} />)
+          {loading ? (
+            <div className="loading" style={{ gridColumn: "1 / -1" }}>
+              Applying filters...
+            </div>
+          ) : filteredProducts.length > 0 ? (
+            filteredProducts.map((product) => <ProductCard key={product._id} product={product} />)
           ) : (
             <div className="no-products">
               <p>No products found matching your criteria.</p>

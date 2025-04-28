@@ -5,10 +5,11 @@ import { Link } from "react-router-dom"
 import "../styles/Profile.css"
 
 function Profile({ user }) {
+  // Initialize directly from the user prop
   const [profile, setProfile] = useState(user)
   const [formData, setFormData] = useState({
-    name: user.name,
-    email: user.email,
+    name: user?.name || "", // Add null checks
+    email: user?.email || "", // Add null checks
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
@@ -18,26 +19,21 @@ function Profile({ user }) {
   const [success, setSuccess] = useState(null)
   const [activeTab, setActiveTab] = useState("profile")
 
+  // Update form if user prop changes (e.g., after login)
   useEffect(() => {
-    const fetchUserProfile = async () => {
-      try {
-        const response = await fetch(`http://localhost:5000/api/users/${user._id}`)
-        if (response.ok) {
-          const userData = await response.json()
-          setProfile(userData)
-          setFormData((prev) => ({
-            ...prev,
-            name: userData.name,
-            email: userData.email,
-          }))
-        }
-      } catch (err) {
-        console.error("Error fetching user profile:", err)
-      }
+    if (user) {
+      setProfile(user)
+      setFormData((prev) => ({
+        ...prev,
+        name: user.name,
+        email: user.email,
+        // Reset password fields when user context changes
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      }))
     }
-
-    fetchUserProfile()
-  }, [user._id])
+  }, [user])
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
@@ -46,6 +42,7 @@ function Profile({ user }) {
 
   const handleProfileUpdate = async (e) => {
     e.preventDefault()
+    if (!user) return setError("User not found") // Guard clause
     setLoading(true)
     setError(null)
     setSuccess(null)
@@ -68,18 +65,20 @@ function Profile({ user }) {
       }
 
       const updatedUser = await response.json()
-      setProfile(updatedUser)
+      setProfile(updatedUser) // Update local profile state
 
-      // Update localStorage
+      // Update localStorage if needed (App.jsx might handle this better via login prop)
       const storedUser = JSON.parse(localStorage.getItem("user"))
-      localStorage.setItem(
-        "user",
-        JSON.stringify({
-          ...storedUser,
-          name: updatedUser.name,
-          email: updatedUser.email,
-        }),
-      )
+      if (storedUser) {
+        localStorage.setItem(
+          "user",
+          JSON.stringify({
+            ...storedUser, // Keep token/other info if stored
+            name: updatedUser.name,
+            email: updatedUser.email,
+          }),
+        )
+      }
 
       setSuccess("Profile updated successfully")
     } catch (err) {
@@ -91,11 +90,11 @@ function Profile({ user }) {
 
   const handlePasswordChange = async (e) => {
     e.preventDefault()
+    if (!user) return setError("User not found") // Guard clause
     setLoading(true)
     setError(null)
     setSuccess(null)
 
-    // Validate password match
     if (formData.newPassword !== formData.confirmPassword) {
       setError("New passwords do not match")
       setLoading(false)
@@ -132,6 +131,11 @@ function Profile({ user }) {
     } finally {
       setLoading(false)
     }
+  }
+
+  // Handle case where user data is not available yet
+  if (!user) {
+    return <div className="loading">Loading profile...</div> // Or redirect to login
   }
 
   return (
