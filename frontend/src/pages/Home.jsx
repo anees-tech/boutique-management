@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Link } from "react-router-dom"
 // Import Swiper React components
 import { Swiper, SwiperSlide } from "swiper/react"
@@ -14,7 +14,6 @@ import { Navigation, Pagination, Autoplay } from "swiper/modules"
 
 import ProductCard from "../components/ProductCard"
 import "../styles/Home.css"
-import { dummyProducts, dummyCategories } from "../dummyData" // Import dummy data
 
 // Add styles for the slider
 const sliderStyles = `
@@ -57,13 +56,12 @@ const sliderStyles = `
 `
 
 function Home() {
-  // Use dummy data directly
-  const [featuredProducts, setFeaturedProducts] = useState(dummyProducts.filter((p) => p.featured))
-  const [categories, setCategories] = useState(dummyCategories)
-  const [loading, setLoading] = useState(false) // Set loading to false initially
+  const [featuredProducts, setFeaturedProducts] = useState([])
+  const [categories, setCategories] = useState([])
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  // Placeholder images for the slider - Keep this as it's local config
+  // Placeholder images for the slider
   const sliderImages = [
     {
       src: "/placeholder.svg?height=600&width=1200&text=Slide+1",
@@ -84,6 +82,35 @@ function Home() {
       text: "Up to 50% off selected items",
     },
   ]
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Fetch featured products
+        const productsResponse = await fetch("http://localhost:5000/api/products/featured")
+        if (!productsResponse.ok) {
+          throw new Error("Failed to fetch featured products")
+        }
+        const productsData = await productsResponse.json()
+        setFeaturedProducts(productsData)
+
+        // Fetch categories
+        const categoriesResponse = await fetch("http://localhost:5000/api/categories")
+        if (!categoriesResponse.ok) {
+          throw new Error("Failed to fetch categories")
+        }
+        const categoriesData = await categoriesResponse.json()
+        setCategories(categoriesData)
+
+        setLoading(false)
+      } catch (err) {
+        setError(err.message)
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [])
 
   if (loading) {
     return <div className="loading">Loading...</div>
@@ -146,7 +173,6 @@ function Home() {
           {categories.map((category) => (
             <Link to={`/products?category=${category.name}`} className="category-card" key={category._id}>
               <div className="category-image">
-                {/* Use category image from dummy data */}
                 <img src={category.image || "/placeholder.svg"} alt={category.name} />
               </div>
               <h3>{category.name}</h3>
