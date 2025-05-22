@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import "../styles/Auth.css"
+import api from "../api"
 
 function Register({ login }) {
   const navigate = useNavigate()
@@ -33,28 +34,16 @@ function Register({ login }) {
     }
 
     try {
-      const response = await fetch("http://localhost:5000/api/auth/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
-          password: formData.password,
-        }),
+      const userData = await api.auth.register({
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
       })
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || "Registration failed")
-      }
-
-      const userData = await response.json()
       login(userData)
       navigate("/")
     } catch (err) {
-      setError(err.message)
+      setError(err.message || "Registration failed")
     } finally {
       setLoading(false)
     }

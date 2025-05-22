@@ -1,14 +1,21 @@
 "use client"
 
 import { useState } from "react"
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import "../styles/Navbar.css"
 
 function Navbar({ user, logout, cartItemCount }) {
   const [menuOpen, setMenuOpen] = useState(false)
+  const navigate = useNavigate()
 
   const toggleMenu = () => {
     setMenuOpen(!menuOpen)
+  }
+
+  const handleLogout = () => {
+    logout()
+    navigate("/")
+    setMenuOpen(false)
   }
 
   return (
@@ -52,14 +59,15 @@ function Navbar({ user, logout, cartItemCount }) {
                   Orders
                 </Link>
               </li>
+              {user.role === "admin" && (
+                <li className="nav-item">
+                  <Link to="/admin" className="nav-link admin-link" onClick={() => setMenuOpen(false)}>
+                    Admin Panel
+                  </Link>
+                </li>
+              )}
               <li className="nav-item">
-                <button
-                  className="nav-link logout-btn"
-                  onClick={() => {
-                    logout()
-                    setMenuOpen(false)
-                  }}
-                >
+                <button className="nav-link logout-btn" onClick={handleLogout}>
                   Logout
                 </button>
               </li>

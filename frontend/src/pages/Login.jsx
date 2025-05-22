@@ -1,17 +1,22 @@
 "use client"
 
 import { useState } from "react"
-import { Link, useNavigate } from "react-router-dom"
+import { Link, useNavigate, useLocation } from "react-router-dom"
 import "../styles/Auth.css"
+import api from "../api"
 
 function Login({ login }) {
   const navigate = useNavigate()
+  const location = useLocation()
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+
+  // Get the redirect path from location state or default to home
+  const from = location.state?.from?.pathname || "/"
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
@@ -24,24 +29,13 @@ function Login({ login }) {
     setError(null)
 
     try {
-      const response = await fetch("http://localhost:5000/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || "Login failed")
-      }
-
-      const userData = await response.json()
+      const userData = await api.auth.login(formData)
       login(userData)
-      navigate("/")
+
+      // Redirect to the page they were trying to access or home
+      navigate(from, { replace: true })
     } catch (err) {
-      setError(err.message)
+      setError(err.message || "Login failed")
     } finally {
       setLoading(false)
     }

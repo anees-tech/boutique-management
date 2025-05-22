@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import "../styles/Checkout.css"
+import api from "../api"
 
 function Checkout({ cart, clearCart, user }) {
   const navigate = useNavigate()
@@ -54,20 +55,7 @@ function Checkout({ cart, clearCart, user }) {
         totalAmount: calculateSubtotal(),
       }
 
-      const response = await fetch("http://localhost:5000/api/orders", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(orderData),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || "Failed to place order")
-      }
-
-      const data = await response.json()
+      const data = await api.orders.createOrder(orderData)
 
       // Clear the cart
       clearCart()
@@ -75,7 +63,7 @@ function Checkout({ cart, clearCart, user }) {
       // Redirect to order confirmation
       navigate(`/orders?success=true&orderId=${data._id}`)
     } catch (err) {
-      setError(err.message)
+      setError(err.message || "Failed to place order")
     } finally {
       setLoading(false)
     }
